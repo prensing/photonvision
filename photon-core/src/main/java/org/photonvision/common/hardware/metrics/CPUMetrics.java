@@ -16,6 +16,7 @@
  */
 
 package org.photonvision.common.hardware.metrics;
+import org.photonvision.common.logging.Logger;
 
 public class CPUMetrics extends MetricsBase {
     private String cpuMemSplit = null;

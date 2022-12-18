@@ -27,48 +27,96 @@ import org.photonvision.common.util.ShellExec;
 
 public abstract class MetricsBase {
     static final Logger logger = new Logger(MetricsBase.class, LogGroup.General);
+
     // CPU
-    public static String cpuMemoryCommand = "vcgencmd get_mem arm | grep -Eo '[0-9]+'";
-    public static String cpuTemperatureCommand =
+    public static String cpuMemoryCommand = "";
+    static final String cpuMemoryCommand_Linux = "grep MemTotal: /proc/meminfo | awk -F ' ' '{print int($2 / 1024);}'";
+    // not sure if this is needed
+    static final String cpuMemoryCommand_RPi = "vcgencmd get_mem arm | grep -Eo '[0-9]+'";
+
+    public static String cpuTemperatureCommand = "";
+    static final String cpuTemperatureCommand_Linux =
             "sed 's/.\\{3\\}$/.&/' <<< cat /sys/class/thermal/thermal_zone0/temp";
-    public static String cpuUtilizationCommand =
+
+    public static String cpuUtilizationCommand = "";
+    static final String cpuUtilizationCommand_Linux =
             "top -bn1 | grep \"Cpu(s)\" | sed \"s/.*, *\\([0-9.]*\\)%* id.*/\\1/\" | awk '{print 100 - $1}'";
 
-    public static String cpuThrottleReasonCmd =
+    public static String cpuThrottleReasonCmd = "";
+    static final String cpuThrottleReasonCmd_RPi =
             "if ((  $(( $(vcgencmd get_throttled | grep -Eo 0x[0-9a-fA-F]*) & 0x01 )) != 0x00 )); then echo \"LOW VOLTAGE\"; "
                     + "elif ((  $(( $(vcgencmd get_throttled | grep -Eo 0x[0-9a-fA-F]*) & 0x08 )) != 0x00 )); then echo \"HIGH TEMP\"; "
                     + "elif ((  $(( $(vcgencmd get_throttled | grep -Eo 0x[0-9a-fA-F]*) & 0x10000 )) != 0x00 )); then echo \"Prev. Low Voltage\"; "
                     + "elif ((  $(( $(vcgencmd get_throttled | grep -Eo 0x[0-9a-fA-F]*) & 0x80000 )) != 0x00 )); then echo \"Prev. High Temp\"; "
                     + " else echo \"None\"; fi";
 
-    public static String cpuUptimeCommand = "uptime -p | cut -c 4-";
+    public static String cpuUptimeCommand = "";
+    static final String cpuUptimeCommand_Linux = "uptime -p | cut -c 4-";
 
     // GPU
-    public static String gpuMemoryCommand = "vcgencmd get_mem gpu | grep -Eo '[0-9]+'";
-    public static String gpuMemUsageCommand = "vcgencmd get_mem malloc | grep -Eo '[0-9]+'";
+    public static String gpuMemoryCommand = "";
+    static final String gpuMemoryCommand_RPi = "vcgencmd get_mem gpu | grep -Eo '[0-9]+'";
+
+    public static String gpuMemUsageCommand = "";
+    static final String gpuMemUsageCommand_RPi = "vcgencmd get_mem malloc | grep -Eo '[0-9]+'";
 
     // RAM
-    public static String ramUsageCommand = "free --mega | awk -v i=2 -v j=3 'FNR == i {print $j}'";
+    public static String ramUsageCommand = "";
+    static final String ramUsageCommand_Linux = "free --mega | awk -v i=2 -v j=3 'FNR == i {print $j}'";
 
     // Disk
-    public static String diskUsageCommand = "df ./ --output=pcent | tail -n +2";
+    public static String diskUsageCommand = "";
+    static final String diskUsageCommand_Linux = "df ./ --output=pcent | tail -n +2";
 
     private static ShellExec runCommand = new ShellExec(true, true);
 
     public static void setConfig(HardwareConfig config) {
-        if (Platform.isRaspberryPi()) return;
-        cpuMemoryCommand = config.cpuMemoryCommand;
-        cpuTemperatureCommand = config.cpuTempCommand;
-        cpuUtilizationCommand = config.cpuUtilCommand;
-        cpuThrottleReasonCmd = config.cpuThrottleReasonCmd;
-        cpuUptimeCommand = config.cpuUptimeCommand;
+        if (!config.cpuMemoryCommand.isEmpty())
+            cpuMemoryCommand = config.cpuMemoryCommand;
+        else if (Platform.isRaspberryPi())
+            cpuMemoryCommand = cpuMemoryCommand_RPi;
+        else if (Platform.isLinux())
+            cpuMemoryCommand = cpuMemoryCommand_Linux;
 
-        gpuMemoryCommand = config.gpuMemoryCommand;
-        gpuMemUsageCommand = config.gpuMemUsageCommand;
-
-        diskUsageCommand = config.diskUsageCommand;
-
-        ramUsageCommand = config.ramUtilCommand;
+        if (!config.cpuTempCommand.isEmpty())
+            cpuTemperatureCommand = config.cpuTempCommand;
+        else if (Platform.isLinux())
+            cpuTemperatureCommand = cpuTemperatureCommand_Linux;
+        
+        if (!config.cpuUtilCommand.isEmpty())
+            cpuUtilizationCommand = config.cpuUtilCommand;
+        else if (Platform.isLinux())
+            cpuUtilizationCommand = cpuUtilizationCommand_Linux;
+                
+        if (!config.cpuThrottleReasonCmd.isEmpty())
+            cpuThrottleReasonCmd = config.cpuThrottleReasonCmd;
+        else if (Platform.isRaspberryPi())
+            cpuThrottleReasonCmd = cpuThrottleReasonCmd_RPi;
+        
+        if (!config.cpuUptimeCommand.isEmpty())
+            cpuUptimeCommand = config.cpuUptimeCommand;
+        else if (Platform.isLinux())
+            cpuUptimeCommand = cpuUptimeCommand_Linux;
+        
+        if (!config.gpuMemoryCommand.isEmpty())
+            gpuMemoryCommand = config.gpuMemoryCommand;
+        else if (Platform.isRaspberryPi())
+            gpuMemoryCommand = gpuMemoryCommand_RPi;
+                
+        if (!config.gpuMemUsageCommand.isEmpty())
+            gpuMemUsageCommand = config.gpuMemUsageCommand;
+        else if (Platform.isRaspberryPi())
+            gpuMemUsageCommand = gpuMemUsageCommand_RPi;
+        
+        if (!config.diskUsageCommand.isEmpty())
+            diskUsageCommand = config.diskUsageCommand;
+        else if (Platform.isLinux())
+            diskUsageCommand = diskUsageCommand_Linux;
+        
+        if (!config.ramUtilCommand.isEmpty())
+            ramUsageCommand = config.ramUtilCommand;
+        else if (Platform.isLinux())
+            ramUsageCommand = ramUsageCommand_Linux;
     }
 
     public static synchronized String execute(String command) {

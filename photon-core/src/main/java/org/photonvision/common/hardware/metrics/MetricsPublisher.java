@@ -49,7 +49,7 @@ public class MetricsPublisher {
     }
 
     public void publish() {
-        if (!Platform.isRaspberryPi()) {
+        if (!Platform.isLinux()) {
             logger.debug("Ignoring metrics on non-Pi devices");
             return;
         }
